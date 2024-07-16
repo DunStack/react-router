@@ -94,9 +94,9 @@ export default class Router<Name extends string = 'router'> {
     this.#prevIndex = this.#index
   }
 
-  #navigate = <To extends string, S>(type: keyof typeof NavigateActionMap, to: To | null, ...[options]: NavigateOptions<To, S>) => {
+  #navigate = <To extends NavigateTo, State>(type: keyof typeof NavigateActionMap, to: To, ...[options]: NavigateArgs<To, State>) => {
     const { delta, action } = NavigateActionMap[type]
-    const routerState: RouterState<S> = {
+    const routerState: RouterState<State> = {
       index: this.#index + delta,
       state: options?.state
     }
@@ -104,7 +104,7 @@ export default class Router<Name extends string = 'router'> {
     this.history[type](
       { [this.#stateName]: routerState }, 
       "", 
-      this.createHref(to, ...[options] as NavigateOptions<To, S>)
+      this.createHref(to, ...[options] as NavigateArgs<To, State>)
     )
     
     this.#navigateNotify(action, delta)
@@ -121,13 +121,15 @@ export default class Router<Name extends string = 'router'> {
     }
   }
 
-  createHref = <To extends string, S>(to: To | null, ...[options]: NavigateOptions<To, S>) => {
+  createHref = <To extends NavigateTo, State>(to: To, ...[options]: NavigateArgs<To, State>) => {
     let pathname = to || ""
-    const { search = "", hash = "" } = options || {}
+    if (!options) return pathname
     
-    if (hasParams<To, S>(options)) {
+    const { search = "", hash = "" } = options
+    
+    if ('params' in options) {
       pathname = pathname.replace(/\/:[^/]+/g, segment => {
-        return '/' + options.params[segment.substring(2) as keyof PathParams<To>]
+        return '/' + (options.params)[segment.substring(2)]
       })
     }
 
@@ -156,12 +158,12 @@ export default class Router<Name extends string = 'router'> {
     this.go(1)
   }
 
-  push = <To extends string, S>(to: To | null, ...[options]: NavigateOptions<To, S>) => {
-    return this.#navigate('pushState', to, ...[options] as NavigateOptions<To, S>)
+  push = <To extends NavigateTo, State>(to: To, ...[options]: NavigateArgs<To, State>) => {
+    return this.#navigate('pushState', to, ...[options] as NavigateArgs<To, State>)
   }
 
-  replace = <To extends string, S>(to: To | null, ...[options]: NavigateOptions<To, S>) => {
-    return this.#navigate('replaceState', to, ...[options] as NavigateOptions<To, S>)
+  replace = <To extends NavigateTo, State>(to: To, ...[options]: NavigateArgs<To, State>) => {
+    return this.#navigate('replaceState', to, ...[options] as NavigateArgs<To, State>)
   }
 
   popstate = () => {
@@ -170,34 +172,30 @@ export default class Router<Name extends string = 'router'> {
   }
 }
 
+export type DynamicPath = `${string}/:${string}`
+
 type PathParamKey<P> = P extends `${infer _}/:${infer S}` 
   ? S extends `${infer S1}/${infer S2}`
     ? S1 | PathParamKey<`/${S2}`>
     : S
   : never
 
-type PathParams<To> = To extends string 
-  ? PathParamKey<To> extends never
-    ? never
-    : Record<PathParamKey<To>, string | number>
+export type PathParams<To> = To extends DynamicPath 
+  ? Record<PathParamKey<To>, string | number>
   : never
 
-type NavigateOptions<To, S> = To extends string
-  ? PathParams<To> extends never 
-    ? [] | [CommonNavigateOptions<S>]
-    : [NavigateOptionsWithParams<To, S>]
-  : [] | [CommonNavigateOptions<S>]
-
-interface CommonNavigateOptions<S> {
+export type NavigateOptions<To, State> = {
   hash?: `#${string}`
   search?: `?${string}`
-  state?: S
-}
+  state?: State
+} & (
+  To extends DynamicPath
+    ? { params: PathParams<To> }
+    : {}
+)
 
-interface NavigateOptionsWithParams<To, S> extends CommonNavigateOptions<S> {
-  params: PathParams<To>
-}
+export type NavigateArgs<To, State> = To extends DynamicPath 
+  ? [NavigateOptions<To, State>] 
+  : [NavigateOptions<To, State>?]
 
-function hasParams<To, S>(options: CommonNavigateOptions<S> | NavigateOptionsWithParams<To, S> | undefined): options is NavigateOptionsWithParams<To, S> {
-  return options ? 'params' in options : false
-}
+export type NavigateTo = string | null | undefined
