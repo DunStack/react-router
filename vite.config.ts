@@ -11,9 +11,9 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: './lib/router.tsx',
+      entry: './lib/index.ts',
       name: 'Router',
-      fileName: 'router'
+      fileName: 'index'
     },
     rollupOptions: {
       external: ['react'],

@@ -6,13 +6,13 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/router.umd.cjs",
-  "module": "./dist/router.js",
-  "types": "./dist/router.d.ts",
+  "main": "./dist/index.umd.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    "types": "./dist/router.d.ts",
-    "import": "./dist/router.js",
-    "require": "./dist/router.umd.cjs"
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js",
+    "require": "./dist/index.umd.cjs"
   },
   "scripts": {
     "dev": "vite build -w",
