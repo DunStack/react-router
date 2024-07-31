@@ -1,7 +1,7 @@
-import Router from "../router"
+import { useParams } from "../../lib/router"
 
 export default function Post() {
-  const { id } = Router.useParams()!
+  const { id } = useParams()!
 
   return <p>Post {id}</p>
 }

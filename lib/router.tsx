@@ -1,9 +1,6 @@
-import { Children, createContext, useContext, useMemo } from "react";
+import { Children, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { matchPath, useNonNullableContext } from "./utils";
-
-interface Location<State = unknown> extends Pick<globalThis.Location, 'pathname' | 'hash' | 'search'> {
-  state?: State
-}
+import type { Location, RouterHistory } from "./history";
 
 interface RouteMetadata {
   path: string
@@ -16,6 +13,7 @@ interface ParsedRoutes {
 }
 
 interface ProviderProps {
+  history: RouterHistory
   children: React.ReactNode
 }
 
@@ -33,7 +31,7 @@ type RouteNode =
   | React.ReactElement<RouteProps>
   | readonly React.ReactElement<RouteProps>[]
 
-export function createRouter() {
+export default function createRouter() {
   const LocationContext = createContext<Location | undefined>(undefined)
   const OutletContext = createContext<React.ReactNode>(undefined)
   const RouteIndexContext = createContext<string | undefined>(undefined)
@@ -42,9 +40,18 @@ export function createRouter() {
   const useLocation = () => useNonNullableContext(LocationContext)
   const useParams = () => useContext(ParamsContext)
 
-  function Provider({ children }: ProviderProps) {
+  function Provider({ history, children }: ProviderProps) {
+    const [location, setLocation] = useState(history.location)
+    
+    useEffect(() => history.listen('navigate', ({ location }) => setLocation(location)), [history])
+
+    useEffect(() => {
+      addEventListener('popstate', history.popstate)
+      return () => removeEventListener('popstate', history.popstate)
+    }, [history])
+
     return (
-      <LocationContext.Provider value={window.location}>
+      <LocationContext.Provider value={location}>
         {children}
       </LocationContext.Provider>
     )
@@ -140,3 +147,15 @@ export function createRouter() {
     }
   }
 }
+
+const DefaultRouter = createRouter()
+
+export const RouterProvider = DefaultRouter.Provider
+export const Routes = DefaultRouter.Routes
+export const Route = DefaultRouter.Route
+export const Outlet = DefaultRouter.Outlet
+
+export const useLocation = DefaultRouter.useLocation
+export const useParams = DefaultRouter.useParams
+
+export { createBrowserHistory } from './history'

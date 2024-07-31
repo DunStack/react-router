@@ -1,23 +1,25 @@
-import Router from "./router";
+import { RouterProvider, Routes, Route, createBrowserHistory } from "../lib/router";
 import Home from "./routes/Home";
 import Layout from "./routes/Layout";
 import NoMatch from "./routes/NoMatch";
 import Post from "./routes/Post";
 import Posts from "./routes/Posts";
 
+const history = createBrowserHistory()
+
 export default function App() {
   return (
-    <Router.Provider>
-      <Router.Routes>
-        <Router.Route Component={Layout}>
-          <Router.Route Component={Home} />
-          <Router.Route path='posts'>
-            <Router.Route Component={Posts} />
-            <Router.Route path=':id' Component={Post} />
-          </Router.Route>
-        </Router.Route>
-        <Router.Route path='*' Component={NoMatch} />
-      </Router.Routes>
-    </Router.Provider>
+    <RouterProvider history={history}>
+      <Routes>
+        <Route Component={Layout}>
+          <Route Component={Home} />
+          <Route path='posts'>
+            <Route Component={Posts} />
+            <Route path=':id' Component={Post} />
+          </Route>
+        </Route>
+        <Route path='*' Component={NoMatch} />
+      </Routes>
+    </RouterProvider>
   )
 }
