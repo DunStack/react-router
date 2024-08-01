@@ -1,7 +1,12 @@
-import { useParams } from "../../lib/router"
+import { Link, useParams } from "../../lib/router"
 
 export default function Post() {
   const { id } = useParams()!
 
-  return <p>Post {id}</p>
+  return (
+    <>
+      <Link to={-1}>Go back</Link>
+      <p>Post {id}</p>
+    </>
+  )
 }

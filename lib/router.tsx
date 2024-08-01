@@ -1,6 +1,21 @@
-import { Children, createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Children, createContext, forwardRef, useContext, useEffect, useMemo, useState } from "react";
 import { matchPath, useNonNullableContext } from "./utils";
-import type { Location, RouterHistory } from "./history";
+import { hasNavigateParams, type DynamicPath, type Location, type NavigateOptions, type NavigateTo, type RouterHistory } from "./history";
+
+type PopLinkProps = {
+  to: number
+}
+
+type NavigateLinkProps<To extends NavigateTo, State> = {
+  to?: To | string
+  replace?: boolean
+} & NavigateOptions<To, State>
+
+type LinkProps<To extends NavigateTo, State> = React.ComponentProps<'a'> & (PopLinkProps | NavigateLinkProps<To, State>)
+
+function isPopLink<To extends NavigateTo, State>(props: PopLinkProps | NavigateLinkProps<To, State>): props is PopLinkProps {
+  return typeof props.to === 'number'
+}
 
 interface RouteMetadata {
   path: string
@@ -31,12 +46,14 @@ type RouteNode =
   | React.ReactElement<RouteProps>
   | readonly React.ReactElement<RouteProps>[]
 
-export default function createRouter() {
+function createRouter() {
+  const HistoryContext = createContext<RouterHistory | undefined>(undefined)
   const LocationContext = createContext<Location | undefined>(undefined)
   const OutletContext = createContext<React.ReactNode>(undefined)
   const RouteIndexContext = createContext<string | undefined>(undefined)
   const ParamsContext = createContext<Record<string, string> | undefined>(undefined)
 
+  const useHistory = () => useNonNullableContext(HistoryContext)
   const useLocation = () => useNonNullableContext(LocationContext)
   const useParams = () => useContext(ParamsContext)
 
@@ -51,9 +68,11 @@ export default function createRouter() {
     }, [history])
 
     return (
-      <LocationContext.Provider value={location}>
-        {children}
-      </LocationContext.Provider>
+      <HistoryContext.Provider value={history}>
+        <LocationContext.Provider value={location}>
+          {children}
+        </LocationContext.Provider>
+      </HistoryContext.Provider>
     )
   }
 
@@ -90,14 +109,59 @@ export default function createRouter() {
   function Outlet() {
     return useContext(OutletContext)
   }
+  
+  function Link<To extends NavigateTo, State>(props: LinkProps<To, State>, ref: React.ForwardedRef<HTMLAnchorElement>) {
+    const history = useHistory()
+    
+    let href: string, 
+    restProps: React.ComponentProps<'a'>,
+    navigate: () => void
+    
+    if (isPopLink(props)) {
+      const { to, ...rest } = props
+      href = ""
+      navigate = () => history.go(to)
+      restProps = rest
+    } else {
+      const { to = "", replace, ...otherProps } = props
+      const navigateType = replace ? 'replace' : 'push'
+      if (hasNavigateParams(to, otherProps)) {
+        const { hash, search, state, params, ...rest } = otherProps
+        const options: NavigateOptions<DynamicPath, State> = { hash, search, state, params }
+        href = history.createHref(to, options)
+        restProps = rest
+        navigate = () => history[navigateType](to, options)
+      } else {
+        const { hash, search, state, ...rest } = otherProps
+        const options: NavigateOptions<string, State> = { hash, search, state }
+        href = history.createHref(to, options)
+        restProps = rest
+        navigate = () => history[navigateType](to, options)
+      }
+    }
+  
+    return (
+      <a 
+        ref={ref} 
+        href={href} 
+        onClick={e => {
+          e.preventDefault()
+          navigate()
+        }}
+        {...restProps} 
+      />
+    )
+  }
 
   return {
     Provider,
     Routes,
     Route,
     Outlet,
+    Link: forwardRef(Link) as typeof Link,
+    useHistory,
     useLocation,
-    useParams
+    useParams,
   }
 
   function parseRoutes(routes: RouteNode, parentIndex?: string): ParsedRoutes {
@@ -154,7 +218,9 @@ export const RouterProvider = DefaultRouter.Provider
 export const Routes = DefaultRouter.Routes
 export const Route = DefaultRouter.Route
 export const Outlet = DefaultRouter.Outlet
+export const Link = DefaultRouter.Link
 
+export const useHistory = DefaultRouter.useHistory
 export const useLocation = DefaultRouter.useLocation
 export const useParams = DefaultRouter.useParams
 
