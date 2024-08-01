@@ -1,19 +1,19 @@
 {
   "name": "@dunstack/router",
-  "private": true,
+  "private": false,
   "version": "0.0.0",
   "type": "module",
   "files": [
     "dist",
-    "index.d.ts"
+    "types/lib"
   ],
-  "main": "./dist/counter.umd.cjs",
-  "module": "./dist/counter.js",
-  "types": "./index.d.ts",
+  "main": "./dist/router.umd.cjs",
+  "module": "./dist/router.js",
+  "types": "./types/lib/router.d.ts",
   "exports": {
-    "types": "./index.d.ts",
-    "import": "./dist/counter.js",
-    "require": "./dist/counter.umd.cjs"
+    "types": "./types/lib/router.d.ts",
+    "import": "./dist/router.js",
+    "require": "./dist/router.umd.cjs"
   },
   "scripts": {
     "dev": "vite",

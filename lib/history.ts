@@ -10,7 +10,7 @@ export type DynamicPath = `${string}:${string}`
 
 export type NavigateTo = string
 
-export function hasNavigateParams<To extends NavigateTo, State>(to: To, options: NavigateOptions<NavigateTo, State>): options is NavigateOptions<DynamicPath, State> {
+export function hasNavigateParams<To extends NavigateTo, State>(to: To, _options: NavigateOptions<NavigateTo, State>): _options is NavigateOptions<DynamicPath, State> {
   return to.includes(":")
 }
 
