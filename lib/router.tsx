@@ -1,6 +1,13 @@
 import { Children, createContext, forwardRef, useContext, useEffect, useMemo, useState } from "react";
 import { matchPath, useNonNullableContext } from "./utils";
-import { hasNavigateParams, type DynamicPath, type Location, type NavigateOptions, type NavigateTo, type RouterHistory } from "./history";
+import { hasNavigateParams } from "./history";
+import { History, DynamicPath, Location, NavigateOptions, NavigateTo, RouterHistory } from "./history";
+
+export interface RouteObject {
+  path?: string
+  Component?: React.ComponentType
+  children?: this[]
+}
 
 type PopLinkProps = {
   to: number
@@ -28,17 +35,19 @@ interface ParsedRoutes {
 }
 
 interface ProviderProps {
-  history: RouterHistory
+  name?: string
+  history: History
   children: React.ReactNode
 }
 
-interface RoutesProps {
+interface RoutesChildrenProps {
   children: RouteNode
 }
+interface RoutesRoutesProps {
+  routes: RouteObject[]
+}
 
-interface RouteProps {
-  path?: string
-  Component?: React.ComponentType
+interface RouteProps extends Omit<RouteObject, 'children'> {
   children?: RouteNode
 }
 
@@ -57,18 +66,19 @@ function createRouter() {
   const useLocation = () => useNonNullableContext(LocationContext)
   const useParams = () => useContext(ParamsContext)
 
-  function Provider({ history, children }: ProviderProps) {
-    const [location, setLocation] = useState(history.location)
+  function Provider({ name, history, children }: ProviderProps) {
+    const routerHistory = useMemo(() => new RouterHistory({ name, history }), [name, history])
+    const [location, setLocation] = useState(routerHistory.location)
     
-    useEffect(() => history.listen('navigate', ({ location }) => setLocation(location)), [history])
+    useEffect(() => routerHistory.listen('navigate', ({ location }) => setLocation(location)), [routerHistory])
 
     useEffect(() => {
-      addEventListener('popstate', history.popstate)
-      return () => removeEventListener('popstate', history.popstate)
-    }, [history])
+      addEventListener('popstate', routerHistory.popstate)
+      return () => removeEventListener('popstate', routerHistory.popstate)
+    }, [routerHistory])
 
     return (
-      <HistoryContext.Provider value={history}>
+      <HistoryContext.Provider value={routerHistory}>
         <LocationContext.Provider value={location}>
           {children}
         </LocationContext.Provider>
@@ -76,10 +86,13 @@ function createRouter() {
     )
   }
 
-  function Routes({ children }: RoutesProps) {
+  function Routes(props: RoutesChildrenProps): React.JSX.Element
+  function Routes(props: RoutesRoutesProps): React.JSX.Element
+  function Routes(props: RoutesChildrenProps | RoutesRoutesProps) {
+    const children = 'children' in props ? props.children : renderRoutes(props.routes)
     const { pathname } = useLocation()
     const { element, metadata } = parseRoutes(children)
-    
+
     const { index, params } = useMemo(() => {
       for (const { path, index } of metadata) {
         const match = matchPath(path, pathname)
@@ -164,6 +177,14 @@ function createRouter() {
     useParams,
   }
 
+  function renderRoutes(routes: RouteObject[]) {
+    return routes.map(({ children = [], ...props }, index) => (
+      <Route key={index} {...props}>
+        {renderRoutes(children)}
+      </Route>
+    ))
+  }
+
   function parseRoutes(routes: RouteNode, parentIndex?: string): ParsedRoutes {
     const metadata: RouteMetadata[] = []
   
@@ -171,7 +192,7 @@ function createRouter() {
       const { path = "", children } = route.props
       const index = parentIndex ? `${parentIndex}.${currentIndex}` : `${currentIndex}`
   
-      if (children) {
+      if (children && Children.count(children) > 0) {
         const { metadata: childrenMetadata, element: childrenElement }= parseRoutes(children, index)
   
         childrenMetadata.forEach(childMetadata => {
@@ -223,5 +244,3 @@ export const Link = DefaultRouter.Link
 export const useHistory = DefaultRouter.useHistory
 export const useLocation = DefaultRouter.useLocation
 export const useParams = DefaultRouter.useParams
-
-export { createBrowserHistory } from './history'

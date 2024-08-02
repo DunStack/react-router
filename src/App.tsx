@@ -1,11 +1,9 @@
-import { RouterProvider, Routes, Route, createBrowserHistory } from "../lib/router";
+import { RouterProvider, Routes, Route } from "../lib/router";
 import Home from "./routes/Home";
 import Layout from "./routes/Layout";
 import NoMatch from "./routes/NoMatch";
 import Post from "./routes/Post";
 import Posts from "./routes/Posts";
-
-const history = createBrowserHistory()
 
 export default function App() {
   return (

@@ -74,29 +74,29 @@ interface RouterState<State = unknown> {
   state?: State
 }
 
-type HistoryState<Name extends string, State = unknown> = Record<`__${Name}__`, RouterState<State>>
+type HistoryState<State = unknown> = Record<string, RouterState<State>>
 
-interface RouterInit<Name extends string> {
+interface RouterInit {
   history: History
-  name?: Name
+  name?: string
 }
 
-export class RouterHistory<Name extends string = 'router'> {
+export class RouterHistory {
   history: History
-  name: Name 
+  name: string
 
   #prevIndex: number = 0
   #listeners: { [T in RouterEventType]: Set<RouterEventListener<T>> } = {
     navigate: new Set()
   }
 
-  constructor({ history, name }: RouterInit<Name>) {
+  constructor({ history, name = 'router' }: RouterInit) {
     this.history = history
-    this.name = name || 'router' as Name
+    this.name = name
   }
   
   get #stateName() {
-    return `__${this.name}__` as const
+    return `__${this.name}__`
   }
 
   get #routerState() {
@@ -107,7 +107,7 @@ export class RouterHistory<Name extends string = 'router'> {
     return this.#routerState?.index || 0
   }
     
-  #getRouterState = (historyState?: HistoryState<Name> | null): RouterState | undefined => {
+  #getRouterState = (historyState?: HistoryState | null): RouterState | undefined => {
     return historyState?.[this.#stateName]
   }
 
@@ -202,5 +202,3 @@ export class RouterHistory<Name extends string = 'router'> {
     this.#navigateNotify(NavigateAction.Pop, delta)
   }
 }
-
-export const createBrowserHistory = () => new RouterHistory({ history })
